@@ -6,8 +6,13 @@
     <title>smartAPI</title>
 	<link rel="shortcut icon" href="./img/smartapi.bmp" type="image/x-icon"> 
     <link rel="stylesheet" href="./css/bootstrap.min.css">
+     <link rel="stylesheet" href="./css/swagger-ui.min.css">    
     <script src="./js/analytics.js"></script>
-	<script src="./js/angular.js"></script>
+    <!--	<script src="./js/angular.js"></script>  angular 1.2.16-->
+    <script src="./js/angular.min.js"></script> <!-- angular 1.6.4 -->
+     <script src="./js/angular-sanitize.min.js"></script> <!-- angular 1.6.4 -->
+     <script src="./js/swagger-ui.min.js"></script>      
+    
     <script src="./js/elasticsearch.angular.js"></script>
     <script src="./js/elastic.js"></script>
     <script src="./js/elasticui.min.js"></script>
@@ -41,12 +46,23 @@
 
     <script>
         angular
-            .module('smartapi', ['elasticui','angular.filter'])
+            .module('smartapi', ['elasticui', 'angular.filter', 'swaggerUi', 'ngSanitize'])
             .constant('euiHost', 'http://smart-api.info/_es/')
 			.controller('view', ['$scope', function ($scope) {
 			
 			 }])
 			.controller('search', ['$scope', function($scope) {
+                
+                $scope.showSwaggerUI = function(swaggerUrl) {
+                    console.log(swaggerUrl);
+                    $scope.swaggerUrl[swaggerUrl]='http://smart-api.info/api/metadata/'+swaggerUrl;
+                }   
+                
+                $scope.hideSwaggerUI = function(swaggerUrl) {                    $scope.swaggerUrl[swaggerUrl]=undefined;
+                }
+                
+                $scope.swaggerUrl={};    
+                
 				$scope.searchfield = '_all';
 				$scope.searchfieldValue = false;				
 				$scope.setSearchField = function() {	
@@ -209,6 +225,12 @@
 									Open in <a target="_blank" href="http://smart-api.info/editor/#/?import=http://smart-api.info/api/metadata/{{doc._id}}">Swagger Editor</a>
 									<br/>
 								</span>	
+                                
+                                <span ng-if="doc._source.info.title != '' && doc._source.info.title.length > 0 ">	
+									<div ng-if="!swaggerUrl[doc._id]">Show <button class="btn btn-link" ng-click="showSwaggerUI(doc._id)">Swagger UI</button></div>
+                                    <div ng-if="swaggerUrl[doc._id]">Hide <button class="btn btn-link" ng-click="hideSwaggerUI(doc._id)">Swagger UI</button></div>
+									<div ng-if="swaggerUrl[doc._id]" swagger-ui url="swaggerUrl[doc._id]" api-explorer="true" loading="loadingSwagger"></div>
+								</span>
 								<br/>
 							</div>
 						</td>
