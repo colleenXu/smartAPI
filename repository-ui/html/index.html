@@ -47,7 +47,7 @@
     <script>
         angular
             .module('smartapi', ['elasticui', 'angular.filter', 'swaggerUi', 'ngSanitize'])
-            .constant('euiHost', 'http://dev.smart-api.info/_es/')
+            .constant('euiHost', window.location.host+'/_es/')
 			.controller('view', ['$scope', function ($scope) {
 			
 			 }])
