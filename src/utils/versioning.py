@@ -6,7 +6,7 @@ import logging
 
 from tornado.ioloop import IOLoop
 
-from web.api.es import ESQuery
+from api.es import ESQuery
 
 
 async def backup_and_refresh():
@@ -17,7 +17,7 @@ async def backup_and_refresh():
         esq = ESQuery()
         try:
             esq.backup_all(aws_s3_bucket='smartapi')
-        except:
+        except BaseException:
             logging.exception("Backup failed.")
         esq.refresh_all(dryrun=False)
 

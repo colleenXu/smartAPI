@@ -14,7 +14,6 @@ import requests
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
 from elasticsearch_dsl.connections import connections
-# pylint:disable=import-error, ungrouped-imports
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from tornado.ioloop import IOLoop
 
