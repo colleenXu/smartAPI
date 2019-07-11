@@ -75,7 +75,7 @@ def split_ids(q):
 def create_index(index_name=None, es=None):
     index_name = index_name or ES_INDEX_NAME
     body = {}
-    mapping = {"mappings": smart_api_mapping}
+    mapping = {"mappings": smart_api_mapping['_doc']}
     body.update(mapping)
     _es = es or get_es()
     print(_es.indices.create(index=index_name, body=body), end=" ")
