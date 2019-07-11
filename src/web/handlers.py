@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import sys
 
 import tornado.gen
 import tornado.httpclient
@@ -13,17 +12,12 @@ from jinja2 import Environment, FileSystemLoader
 from tornado.httputil import url_concat
 from torngithub import json_decode, json_encode
 
-from web.api.es import ESQuery
+from api.es import ESQuery
 from biothings.web.api.helper import BaseHandler as BioThingsBaseHandler
 
 log = logging.getLogger("smartapi")
 
-
-src_path = os.path.split(os.path.split(os.path.abspath(__file__))[0])[0]
-if src_path not in sys.path:
-    sys.path.append(src_path)
-
-TEMPLATE_PATH = os.path.join(src_path, 'templates/')
+TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 AVAILABLE_TAGS = ['translator', 'nihdatacommons']
 
 # your Github application Callback
@@ -261,6 +255,7 @@ class AboutHandler(BaseHandler):
         about_output = about_template.render()
         self.write(about_output)
 
+
 class PrivacyHandler(BaseHandler):
     def get(self):
         doc_file = "privacy.html"
@@ -268,12 +263,14 @@ class PrivacyHandler(BaseHandler):
         privacy_output = privacy_template.render()
         self.write(privacy_output)
 
+
 class FAQHandler(BaseHandler):
     def get(self):
         doc_file = "faq.html"
         faq_template = templateEnv.get_template(doc_file)
         faq_output = faq_template.render()
         self.write(faq_output)
+
 
 APP_LIST = [
     (r"/", MainHandler),

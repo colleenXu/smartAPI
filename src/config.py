@@ -1,10 +1,9 @@
 ''' SmartAPI Configuration '''
-# pylint: disable=wildcard-import, unused-wildcard-import, unused-import
 
+from api.handlers import APP_LIST as api_app_list
+from api.query_builder import SmartAPIQueryBuilder
 from biothings.web.settings.default import *
 from config_key import COOKIE_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
-from web.api.handlers import APP_LIST as api_app_list
-from web.api.query_builder import SmartAPIQueryBuilder
 from web.handlers import APP_LIST as web_app_list
 
 # *****************************************************************************
