@@ -237,7 +237,7 @@ class ESQuery():
                 }
             }
         }
-        res = self._es.search(self._index, self._doc_type, query, size=0)
+        res = self._es.search(self._index, query, size=0)
         res = res["aggregations"]
         return res
 
