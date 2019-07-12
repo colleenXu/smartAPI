@@ -5,7 +5,8 @@ smart_api_mapping = {
                 "ignore_example_field": {
                     "match": "example",
                     "mapping": {
-                        "index": False
+                        "index": False,
+                        "type": "text"
                     }
                 }
             },
@@ -33,19 +34,20 @@ smart_api_mapping = {
                     }
                 }
             },
-            # this must be the last template
+            # this is the last template
+            # strings are indexed as both texts and keywords
             {
-                "template_1": {
-                    "match": "*",
+                "strings": {
                     "match_mapping_type": "string",
                     "mapping": {
                         "type": "text",
                         "index": True,
                         "ignore_malformed": True,
                         "fields": {
-                                "raw": {
-                                    "type": "keyword"
-                                }
+                            "raw": {
+                                "type": "keyword",
+                                "ignore_above": 256
+                            }
                         }
                     }
                 }
