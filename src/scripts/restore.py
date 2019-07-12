@@ -21,3 +21,4 @@ if backup:
     esq.restore_all(backup, es.ES_INDEX_NAME)
 else:
     logging.error('Cannot find a backup file.')
+    exit(1)
