@@ -5,6 +5,11 @@ import json
 
 class SmartAPIQueryBuilder(BiothingsESQueryBuilder):
 
+    def _return_query_kwargs(self, query_kwargs):
+        _kwargs = {"index": self.index,"rest_total_hits_as_int":True}
+        _kwargs.update(query_kwargs)
+        return _kwargs 
+
     def get_query_filters(self):
 
         _filter = None
