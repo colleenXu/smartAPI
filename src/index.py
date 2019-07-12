@@ -36,7 +36,7 @@ def schedule_daily_job():
 
 if __name__ == '__main__':
     (SRC_PATH, _) = os.path.split(os.path.abspath(__file__))
-    STATIC_PATH = os.path.join(SRC_PATH, 'static')
+    STATIC_PATH = os.path.join(SRC_PATH, 'web','static')
     schedule_daily_job()
     main(WEB_SETTINGS.generate_app_list(),
          app_settings={"cookie_secret": config.COOKIE_SECRET},
