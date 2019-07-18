@@ -1,15 +1,13 @@
 '''
     API Uptime Monitor
-
-        - Status: Good, Bad, Incompatible, Unknown
-
-        - Run this file directly to perform status check
+    @ 1 am every day
 '''
 
 import logging
 from datetime import datetime
 from functools import partial
 
+import aiocron
 import requests
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
@@ -233,8 +231,8 @@ class Endpoint:
     def check_response_status(self, response):
         return response.status_code
 
-
-async def update_uptime_status():
+@aiocron.crontab('0 2 * * *')
+async def update_uptime():
     '''
         Perform Periodic Update to Uptime Status in ES
     '''
@@ -292,14 +290,13 @@ async def update_uptime_status():
 
 def main():
     '''
-        Check Production Server API Status
+        Check Production Server API Status Manually
 
-            - Output result to screen and file
-
-            - Do not make changes to es index
+        - Output result to screen and file
+        - Does not make changes to es index
     '''
     logging.basicConfig(level=logging.DEBUG)
-    logger = logging.getLogger("utils.uptime.main")
+    logger = logging.getLogger("routines.uptime")
     logger.info("Start checking API status.")
 
     # call smartapi API to fetch all API metadata in registry

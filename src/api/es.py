@@ -18,14 +18,13 @@ from .transform import (SWAGGER2_INDEXED_ITEMS, APIMetadata, decode_raw,
 
 ES_HOST = 'localhost:9200'
 ES_INDEX_NAME = 'smartapi_oas3'
-ES_DOC_TYPE = '_doc'
 
 
 def ask(prompt, options='YN'):
     '''Prompt Yes or No,return the upper case 'Y' or 'N'.'''
     options = options.upper()
     while 1:
-        s = input(prompt+'[%s]' % '|'.join(list(options))).strip().upper()
+        s = input(prompt + '[%s]' % '|'.join(list(options))).strip().upper()
         if s in options:
             break
     return s
@@ -89,16 +88,15 @@ def _get_hit_object(hit):
 
 
 class ESQuery():
-    def __init__(self, index=None, doc_type=None, es_host=None):
+    def __init__(self, index=None, es_host=None):
         self._es = get_es(es_host)
         self._index = index or ES_INDEX_NAME
-        self._doc_type = doc_type or ES_DOC_TYPE
 
     def exists(self, api_id):
         '''return True/False if the input api_doc has existing metadata
            object in the index.
         '''
-        return self._es.exists(index=self._index, doc_type=self._doc_type, id=api_id)
+        return self._es.exists(index=self._index, id=api_id)
 
     # used in APIHandler [POST]
     def save_api(self, api_doc, save_v2=False, overwrite=False, user_name=None,
@@ -106,7 +104,7 @@ class ESQuery():
         '''Adds or updates a compatible-format API document in the SmartAPI index, making it searchable.
         :param save_v2: allow a swagger v2 document pass validation when set to True
         :param overwrite: allow overwriting an existing document if the user_name provided matches the record
-        :param user_name: when overwrite is set to to true, and override_owner not, 
+        :param user_name: when overwrite is set to to true, and override_owner not,
             to allow overwriting the existing document user_name must match that of the document.
         :param override_owner: allow overwriting regardless of ownership when overwrite is also set to True
         :param warn_on_identical: consider rewriting the existing docuement with an identical one unsuccessful
@@ -128,7 +126,7 @@ class ESQuery():
         if doc_exists:
             if not overwrite:
                 is_archived = self._es.get(
-                    index=self._index, doc_type=self._doc_type, id=api_id, _source=["_meta"]).get(
+                    index=self._index, id=api_id, _source=["_meta"]).get(
                     '_source', {}).get(
                     '_meta', {}).get(
                     '_archived', False) == 'true'
@@ -136,7 +134,7 @@ class ESQuery():
                     return {"success": False, "error": "[Conflict] API exists. Not saved."}
             elif not override_owner:
                 _owner = self._es.get(
-                    index=self._index, doc_type=self._doc_type, id=api_id, _source=["_meta"]).get(
+                    index=self._index, id=api_id, _source=["_meta"]).get(
                     '_source', {}).get(
                     '_meta', {}).get(
                     'github_username', '')
@@ -147,22 +145,24 @@ class ESQuery():
         _doc = metadata.convert_es()
         if doc_exists:
             _raw_stored = self._es.get(
-                index=self._index, doc_type=self._doc_type, id=api_id, _source=["~raw"]).get(
+                index=self._index, id=api_id, _source=["~raw"]).get(
                 '_source', {})['~raw']
             if decode_raw(
                     _raw_stored, as_string=True) == decode_raw(
                     _doc.get('~raw'),
                     as_string=True):
                 if warn_on_identical:
-                    return {"success": True, '_id': api_id, "warning": "[Conflict] No change in document."}
+                    return {"success": True, '_id': api_id,
+                            "warning": "[Conflict] No change in document."}
                 else:
                     return {"success": True, '_id': api_id}
 
         # save to es index
         if dryrun:
-            return {"success": True, '_id': "[Dryrun] this is a dryrun. API is not saved.", "dryrun": True}
+            return {"success": True,
+                    '_id': "[Dryrun] this is a dryrun. API is not saved.", "dryrun": True}
         try:
-            self._es.index(index=self._index, doc_type=self._doc_type,
+            self._es.index(index=self._index,
                            body=_doc, id=api_id, refresh=True)
         except RequestError as e:
             return {"success": False, "error": "[ES]" + str(e)}
@@ -208,7 +208,7 @@ class ESQuery():
             query['size'] = min(size, 100)    # set max size to 100 for now.
         if from_ and isinstance(from_, int) and from_ > 0:
             query['from'] = from_
-        res = self._es.search(self._index, self._doc_type, query)
+        res = self._es.search(self._index, query)
         if return_raw == '2':
             return res
         res = [_get_hit_object(d) for d in res['hits']['hits']]
@@ -254,8 +254,8 @@ class ESQuery():
         }
         try:
             res = self._es.search(
-                index=self._index, doc_type=self._doc_type, body=query, size=1, _source=False)
-        except:
+                index=self._index, body=query, size=1, _source=False)
+        except BaseException:
             return
         if res.get('hits', {}).get('hits', []):
             return res['hits']['hits'][0]['_id']
@@ -272,7 +272,7 @@ class ESQuery():
         """delete a saved API metadata, be careful with the deletion."""
         if ask("Are you sure to delete this API metadata?") == 'Y':
             print(self._es.delete(index=self._index,
-                                  doc_type=self._doc_type, id=id))
+                                  id=id))
 
     # used in APIMetaDataHandler [DELETE]
     def archive_api(self, id, user):
@@ -282,8 +282,8 @@ class ESQuery():
         # does the api exist?
         try:
             _doc = self._es.get(index=self._index,
-                                doc_type=self._doc_type, id=id)
-        except:
+                                id=id)
+        except BaseException:
             _doc = None
         if not _doc:
             return (404, {"success": False, "error": "Could not retrieve API '{}' to delete".format(id)})
@@ -293,11 +293,12 @@ class ESQuery():
         # is this user the owner of this api?
         _user = user.get('login', None)
         if _doc.get('_source', {}).get('_meta', {}).get('github_username', '') != _user:
-            return (405, {"success": False, "error": "User '{user}' is not the owner of API '{id}'".format(user=_user, id=id)})
+            return (405, {"success": False, "error": "User '{user}' is not the owner of API '{id}'".format(
+                user=_user, id=id)})
         # do the archive, deregister the slug name
         _doc['_source']['_meta']['_archived'] = 'true'
         _doc['_source']['_meta'].pop('slug', None)
-        self._es.index(index=self._index, doc_type=self._doc_type,
+        self._es.index(index=self._index,
                        id=id, body=_doc['_source'], refresh=True)
 
         return (200, {"success": True, "message": "API '{}' successfully deleted".format(id)})
@@ -312,14 +313,14 @@ class ESQuery():
         if query:
             _query = query
         elif id_list:
-            _query = {"query": {"ids": {"type": ES_DOC_TYPE, "values": id_list}}}
+            _query = {"query": {"ids": {"values": id_list}}}
         elif ignore_archives:
             _query = {"query": {"bool": {"must_not": {"term": {"_meta._archived": "true"}}}}}
         else:
             _query = {"query": {"match_all": {}}}
 
         scan_res = helpers.scan(client=self._es, query=_query,
-                                index=self._index, doc_type=self._doc_type)
+                                index=self._index)
 
         def _fn(x):
             x['_source'].setdefault('_id', x['_id'])
@@ -377,7 +378,8 @@ class ESQuery():
             return _d
 
         if self._es.indices.exists(index_name):
-            if overwrite and ask("Warning: index \"{}\" exists. Do you want to overwrite it?".format(index_name)) == 'Y':
+            if overwrite and ask(
+                    "Warning: index \"{}\" exists. Do you want to overwrite it?".format(index_name)) == 'Y':
                 self._es.indices.delete(index=index_name)
             else:
                 print(
@@ -407,7 +409,7 @@ class ESQuery():
             else:
                 print('\n\tWARNING: ', _id, 'No Version.')
             self._es.index(index=index_name,
-                           doc_type=self._doc_type, body=_doc, id=_id)
+                           body=_doc, id=_id)
         print(swagger_v2_count, ' Swagger Objects and ',
               openapi_v3_count, ' Openapi Objects. ')
         print("Done.")
@@ -419,7 +421,8 @@ class ESQuery():
 
         # reserved for dev node, normal web functioning
         if _slug in ['www', 'dev', 'smart-api']:
-            return (False, {"success": False, "error": "Slug name '{}' is reserved, please choose another".format(_slug)})
+            return (False, {
+                "success": False, "error": "Slug name '{}' is reserved, please choose another".format(_slug)})
 
         # length requirements
         if len(_slug) < 4 or len(_slug) > 50:
@@ -427,7 +430,8 @@ class ESQuery():
 
         # character requirements
         if not all([x in _valid_chars for x in _slug]):
-            return (False, {"success": False, "error": "Slug name contains invalid characters.  Valid characters: '{}'".format(_valid_chars)})
+            return (False, {
+                    "success": False, "error": "Slug name contains invalid characters.  Valid characters: '{}'".format(_valid_chars)})
 
         # does it exist already?
         _query = {
@@ -443,9 +447,10 @@ class ESQuery():
 
         if len(
             self._es.search(
-                index=self._index, doc_type=self._doc_type, body=_query, _source=False).get(
+                index=self._index, body=_query, _source=False).get(
                 'hits', {}).get('hits', [])) > 0:
-            return (False, {"success": False, "error": "Slug name '{}' already exists, please choose another".format(_slug)})
+            return (False, {
+                    "success": False, "error": "Slug name '{}' already exists, please choose another".format(_slug)})
 
         # good name
         return (True, {})
@@ -454,17 +459,19 @@ class ESQuery():
     def set_slug_name(self, _id, user, slug_name):
         ''' set the slug name of API _id to slug_name. '''
         if not self.exists(_id):
-            return (404, {"success": False, "error": "Could not retrieve API '{}' to set slug name".format(_id)})
+            return (404, {"success": False,
+                          "error": "Could not retrieve API '{}' to set slug name".format(_id)})
 
         _user = self._es.get(
-            index=self._index, doc_type=self._doc_type, id=_id, _source=["_meta"]).get(
+            index=self._index, id=_id, _source=["_meta"]).get(
             '_source', {}).get(
             '_meta', {}).get(
             'github_username', '')
 
         # Make sure this is the correct user
         if user.get('login', None) != _user:
-            return (405, {"success": False, "error": "User '{}' is not the owner of API '{}'".format(user.get('login', None), _id)})
+            return (405, {"success": False, "error": "User '{}' is not the owner of API '{}'".format(
+                user.get('login', None), _id)})
 
         # validate the slug name
         _valid, _resp = self._validate_slug_name(slug_name=slug_name)
@@ -473,7 +480,7 @@ class ESQuery():
             return (405, _resp)
 
         # update the slug name
-        self._es.update(index=self._index, doc_type=self._doc_type, id=_id, body={
+        self._es.update(index=self._index, id=_id, body={
                         "doc": {"_meta": {"slug": slug_name.lower()}}}, refresh=True)
 
         return (200, {"success": True, "{}._meta.slug".format(_id): slug_name.lower()})
@@ -482,23 +489,26 @@ class ESQuery():
     def delete_slug(self, _id, user, slug_name):
         ''' delete the slug of API _id. '''
         if not self.exists(_id):
-            return (404, {"success": False, "error": "Could not retrieve API '{}' to delete slug name".format(_id)})
+            return (404, {"success": False,
+                          "error": "Could not retrieve API '{}' to delete slug name".format(_id)})
 
         doc = self._es.get(index=self._index,
-                           doc_type=self._doc_type, id=_id).get('_source', {})
+                           id=_id).get('_source', {})
 
         # Make sure this is the correct user
         if user.get('login', None) != doc.get('_meta', {}).get('github_username', ''):
-            return (405, {"success": False, "error": "User '{}' is not the owner of API '{}'".format(user.get('login', None), _id)})
+            return (405, {"success": False, "error": "User '{}' is not the owner of API '{}'".format(
+                user.get('login', None), _id)})
 
         # Make sure this is the correct slug name
         if doc.get('_meta', {}).get('slug', '') != slug_name:
-            return (405, {"success": False, "error": "API '{}' slug name is not '{}'".format(_id, slug_name)})
+            return (405, {"success": False,
+                          "error": "API '{}' slug name is not '{}'".format(_id, slug_name)})
 
         # do the delete
         doc['_meta'].pop('slug')
 
-        self._es.index(index=self._index, doc_type=self._doc_type,
+        self._es.index(index=self._index,
                        body=doc, id=_id, refresh=True)
 
         return (200, {"success": True, "{}".format(_id): "slug '{}' deleted".format(slug_name)})
@@ -511,15 +521,17 @@ class ESQuery():
         # _id validation
         try:
             api_doc = self._es.get(
-                index=self._index, doc_type=self._doc_type, id=_id)
-        except:
-            return (404, {"success": False, "error": "Could not retrieve API '{}' to refresh".format(_id)})
+                index=self._index, id=_id)
+        except BaseException:
+            return (404, {"success": False,
+                          "error": "Could not retrieve API '{}' to refresh".format(_id)})
         api_doc['_source'].update({'_id': api_doc['_id']})
 
         # ownership validation
         _user = user.get('login', None)
         if api_doc.get('_source', {}).get('_meta', {}).get('github_username', '') != _user:
-            return (405, {"success": False, "error": "User '{user}' is not the owner of API '{id}'".format(user=_user, id=_id)})
+            return (405, {"success": False, "error": "User '{user}' is not the owner of API '{id}'".format(
+                user=_user, id=_id)})
 
         status = self._refresh_one(
             api_doc=api_doc['_source'], user=_user, dryrun=dryrun)
@@ -540,7 +552,7 @@ class ESQuery():
         res = get_api_metadata_by_url(_meta['url'])
         if res and isinstance(res, dict):
             if res.get('success', None) is False:
-                res['error'] = '[Request] '+res.get('error', '')
+                res['error'] = '[Request] ' + res.get('error', '')
                 status = res
             else:
                 _meta['timestamp'] = datetime.now().isoformat()
@@ -560,7 +572,7 @@ class ESQuery():
 
         :param id_list: the list of API documents to perform the refresh operation
         :param ignore_archives:
-        :param dryrun: 
+        :param dryrun:
         :param use_etag: by default, HTTP ETag is used to speed up version detection
         '''
         updates = 0
