@@ -6,6 +6,7 @@ import json
 import logging
 import string
 import sys
+from collections import Counter
 from datetime import date, datetime
 from shlex import shlex
 
@@ -565,23 +566,19 @@ class ESQuery():
 
         return status
 
-    def refresh_all(
-            self, id_list=[],
-            dryrun=True, return_status=False, use_etag=True, ignore_archives=True):
-        '''refresh saved API documents based on their metadata urls.
+    def refresh_all(self, id_list=None, dryrun=True, use_etag=True, ignore_archives=True):
+        '''refresh saved API documents basing on their metadata urls. '''
 
-        :param id_list: the list of API documents to perform the refresh operation
-        :param ignore_archives:
-        :param dryrun:
-        :param use_etag: by default, HTTP ETag is used to speed up version detection
-        '''
-        updates = 0
-        status_li = []
-        logging.info("Refreshing API metadata:")
+        id_list = id_list if id_list else []
+
+        counter = Counter()
+
+        logger = logging.getLogger('smartapi.'+__name__+'.refresh_all')
+        logger.info("Refreshing API metadata.")
 
         for api_doc in self.fetch_all(id_list=id_list, ignore_archives=ignore_archives):
 
-            _id, status = api_doc['_id'], ''
+            logger.info('Checking %s.', api_doc['_id'])
 
             if use_etag:
                 _res = polite_requests(api_doc.get('_meta', {}).get('url', ''), head=True)
@@ -590,28 +587,28 @@ class ESQuery():
                     etag_local = api_doc.get('_meta', {}).get('ETag', '')
                     etag_server = res.headers.get('ETag', 'N').strip('W/"')
                     if etag_local == etag_server:
-                        status = "OK (Via Etag)"
+                        counter['Up to date'] += 1
+                        logger.info('Result: Up to date.')
+                        continue
 
-            if not status:
-                res = self._refresh_one(
-                    api_doc, dryrun=dryrun, override_owner=True, error_on_identical=True,
-                    save_v2=True)
-                if res.get('success'):
-                    if res.get('warning'):
-                        status = 'OK'
-                    else:
-                        status = "OK Updated"
-                        updates += 1
+            res = self._refresh_one(
+                api_doc, dryrun=dryrun, override_owner=True,
+                error_on_identical=True, save_v2=True)
+
+            if res.get('success'):
+                if res.get('warning'):
+                    result = 'Up to date'
                 else:
-                    status = "ERR " + res.get('error')[:60]
+                    result = 'Updated'
+            else:
+                result = 'Error'
+                logger.warning(res.get('error'))
 
-            status_li.append((_id, status))
-            logging.info("%s: %s", _id, status)
+            counter[result] += 1
+            logger.info('Result: %s.', result)
 
-        logging.info("%s: %s APIs refreshed. %s Updates.", get_datestamp(), len(status_li), updates)
+        logger.info("Summary: %s.", counter)
 
         if dryrun:
-            logging.warning("This is a dryrun! No actual changes have been made.")
-            logging.warning("When ready, run it again with \"dryrun=False\" to apply changes.")
-
-        return status_li
+            logger.warning("This is a dryrun! No actual changes have been made.")
+            logger.warning("When ready, run it again with \"dryrun=False\" to apply changes.")

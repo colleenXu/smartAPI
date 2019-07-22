@@ -4,6 +4,7 @@
 '''
 
 import asyncio
+import logging
 
 import aiocron
 from tornado.ioloop import IOLoop
@@ -24,6 +25,16 @@ async def refresh():
 
     await IOLoop.current().run_in_executor(None, sync_func)
 
-if __name__ == '__main__':
+
+def main():
+
+    logging.basicConfig()
+    logger = logging.getLogger('smartapi')
+    logger.setLevel('INFO')
 
     asyncio.run(refresh.func())
+
+
+if __name__ == '__main__':
+
+    main()

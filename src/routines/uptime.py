@@ -295,25 +295,27 @@ def main():
         - Output result to screen and file
         - Does not make changes to es index
     '''
-    logging.basicConfig(level=logging.DEBUG)
-    logger = logging.getLogger("routines.uptime")
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
     logger.info("Start checking API status.")
 
     # call smartapi API to fetch all API metadata in registry
     api_docs = requests.get('https://smart-api.info/api/query?q=__all__&size=100').json()
     logger.info("Retrieved %s api documents.", api_docs['total'])
 
-    # can rename or specify a specific folder to put the file
-    output_file_name = 'smarapi_uptime_robot' + datetime.today().strftime('%Y-%m-%d') + '.txt'
+    output_file_name = 'smartapi_uptime_robot_' + datetime.today().strftime('%Y-%m-%d') + '.txt'
     with open(output_file_name, 'w') as f:  # pylint: disable=invalid-name
 
         for api_doc in api_docs['hits']:
+
+            logger.info("Checking %s.", api_doc['_id'])
             api = API(api_doc)
             api.check_api_status()
-            logger.info("%s : %s", api.id, api.api_status)
+            logger.info("Checked %s: %s.", api.id, api.api_status)
+
             f.write(api.id + '\t' + api.api_status + '\n')
 
-    logger.info("Done.")
+    logger.info("Completed uptime check.")
 
 
 if __name__ == '__main__':
